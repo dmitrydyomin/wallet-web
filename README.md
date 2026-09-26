@@ -57,6 +57,8 @@ Fonts: Google passes use Google Sans Flex (on Google Fonts). SF Pro can't be ser
 
 ## Development
 
+Storybook is published to GitHub Pages at https://dmitrydyomin.github.io/wallet-web/ on every push to `main`.
+
 ```sh
 pnpm storybook   # sample passes + drop-in .pkpass viewer
 pnpm test
