@@ -1,0 +1,41 @@
+{
+  "name": "wallet-web",
+  "version": "0.1.0",
+  "description": "Render Apple Wallet (and later Google Wallet) passes in the browser",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/wallet-web.js",
+  "module": "./dist/wallet-web.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/wallet-web.js"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build-storybook": "storybook build -o storybook-static"
+  },
+  "dependencies": {
+    "@chenglou/pretext": "^0.0.9",
+    "bwip-js": "^4.11.4",
+    "fflate": "^0.8.3"
+  },
+  "devDependencies": {
+    "@storybook/html-vite": "^10.6.0",
+    "@types/node": "^26.6.2",
+    "jsdom": "^30.1.1",
+    "storybook": "^10.6.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.1"
+  }
+}
