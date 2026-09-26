@@ -4,7 +4,10 @@ import { renderApplePass, type ApplePassInput, type RenderOptions, type Rendered
  * `<apple-wallet-pass src="ticket.pkpass" zoom="1">`. Set `.pass` to render from
  * a source object or bytes instead of a URL. Register with `defineApplePassElement()`.
  */
-export class ApplePassElement extends HTMLElement {
+// On the server there is no HTMLElement; fall back to a stub so importing the package doesn't throw.
+const Base: typeof HTMLElement = typeof HTMLElement === 'undefined' ? (class {} as typeof HTMLElement) : HTMLElement
+
+export class ApplePassElement extends Base {
   static observedAttributes = ['src', 'zoom', 'side', 'locale']
 
   #pass: ApplePassInput | null = null

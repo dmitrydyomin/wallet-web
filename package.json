@@ -1,11 +1,23 @@
 {
   "name": "wallet-web",
   "version": "0.1.0",
-  "description": "Render Apple Wallet (and later Google Wallet) passes in the browser",
-  "type": "module",
+  "description": "Render Apple Wallet and Google Wallet event tickets in the browser, with React components",
+  "keywords": [
+    "apple-wallet",
+    "google-wallet",
+    "pkpass",
+    "passkit",
+    "wallet",
+    "event-ticket",
+    "react"
+  ],
+  "author": "Dmitry Dyomin",
   "license": "MIT",
+  "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "main": "./dist/wallet-web.js",
   "module": "./dist/wallet-web.js",
@@ -26,7 +38,16 @@
     "build": "vite build && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build-storybook": "storybook build -o storybook-static"
+    "build-storybook": "storybook build -o storybook-static",
+    "prepublishOnly": "pnpm test && pnpm build"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.9",
@@ -46,13 +67,5 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.1"
-  },
-  "peerDependencies": {
-    "react": ">=18"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    }
   }
 }
