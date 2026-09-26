@@ -1,6 +1,11 @@
 # wallet-web
 
+[![npm](https://img.shields.io/npm/v/wallet-web)](https://www.npmjs.com/package/wallet-web)
+[![CI](https://github.com/dmitrydyomin/wallet-web/actions/workflows/ci.yml/badge.svg)](https://github.com/dmitrydyomin/wallet-web/actions/workflows/ci.yml)
+
 Render Apple Wallet and Google Wallet event tickets in the browser, matched to the iOS Wallet and Google Wallet apps (and to our Figma mockups).
+
+**[Live demo (Storybook)](https://dmitrydyomin.github.io/wallet-web/)**: sample passes, the Figma mockups, React components, and a viewer for your own `.pkpass` files.
 
 **Apple:** event tickets (`eventTicket`), in both the strip-image and background/thumbnail layouts; `.lproj` localisation; date, number and currency formatting; back fields; voided and expired states.
 **Google:** event tickets (`EventTicketClass` + `EventTicketObject`, or a "Save to Google Wallet" JWT), as the classic card or the new full-screen view; Google's default template and `cardTemplateOverride` rows; localized strings.
