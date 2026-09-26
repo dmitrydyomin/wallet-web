@@ -12,6 +12,14 @@
     "react"
   ],
   "author": "Dmitry Dyomin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dmitrydyomin/wallet-web.git"
+  },
+  "homepage": "https://github.com/dmitrydyomin/wallet-web#readme",
+  "bugs": {
+    "url": "https://github.com/dmitrydyomin/wallet-web/issues"
+  },
   "license": "MIT",
   "type": "module",
   "files": [
@@ -67,5 +75,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.1"
+  },
+  "packageManager": "pnpm@12.5.1",
+  "publishConfig": {
+    "access": "public"
   }
 }

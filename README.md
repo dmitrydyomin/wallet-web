@@ -62,3 +62,14 @@ pnpm storybook   # sample passes + drop-in .pkpass viewer
 pnpm test
 pnpm build
 ```
+
+## Releasing
+
+Releases are published to npm by [GitHub Actions](.github/workflows/release.yml) when a version tag is pushed:
+
+```sh
+npm version patch   # or minor / major: bumps package.json, commits, tags vX.Y.Z
+git push --follow-tags
+```
+
+The workflow checks that the tag matches `package.json`, runs the typecheck, tests and build, then publishes with provenance. It authenticates through npm [trusted publishing](https://docs.npmjs.com/trusted-publishers) (package settings → Trusted publisher → GitHub Actions, workflow `release.yml`), falling back to an `NPM_TOKEN` repository secret.
