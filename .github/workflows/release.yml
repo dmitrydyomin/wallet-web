@@ -13,9 +13,9 @@ jobs:
       # Lets npm authenticate with GitHub's OIDC token (trusted publishing) and sign provenance.
       id-token: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
@@ -24,20 +24,31 @@ jobs:
       - run: npm install -g npm@latest
 
       - name: Check tag matches package.json version
+        id: version
         run: |
-          version="v$(node -p "require('./package.json').version")"
-          if [ "$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+          version="$(node -p "require('./package.json').version")"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version v$version"
             exit 1
+          fi
+          # A version published by hand (e.g. the first release) is skipped rather than failing.
+          if npm view "$(node -p "require('./package.json').name")@$version" version >/dev/null 2>&1; then
+            echo "::notice::$version is already on npm; skipping publish"
+            echo "published=true" >> "$GITHUB_OUTPUT"
           fi
 
       - run: pnpm install --frozen-lockfile
+        if: steps.version.outputs.published != 'true'
       - run: pnpm typecheck
+        if: steps.version.outputs.published != 'true'
       - run: pnpm test
+        if: steps.version.outputs.published != 'true'
       - run: pnpm build
+        if: steps.version.outputs.published != 'true'
 
       # Uses trusted publishing when it's configured for the package on npmjs.com;
       # otherwise falls back to the NPM_TOKEN secret (needed for the very first publish).
       - run: npm publish --provenance --ignore-scripts
+        if: steps.version.outputs.published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
