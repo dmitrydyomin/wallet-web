@@ -1,14 +1,12 @@
 import { allocateWidths, fitFontSize, type FontSpec, type TextMeasurer } from '../core/text.js'
 import type { BarcodeModel, EventTicketModel, FieldModel } from './model.js'
 import { appleTokens, type AppleTokens } from './tokens.js'
+import type { Size, TextBox } from '../core/dom.js'
+
+export type { Size, TextBox }
 
 export type TextAlign = 'left' | 'center' | 'right'
 
-export interface TextBox {
-  text: string
-  font: FontSpec
-  lineHeight: number
-}
 
 export interface FieldLayout {
   key: string
@@ -24,15 +22,14 @@ export interface RowLayout {
   width: number
 }
 
-export interface Size {
-  width: number
-  height: number
-}
 
 export interface BarcodeLayout {
   kind: 'square' | 'pdf417' | 'code128'
+  /** Size of the code itself, inside the white box. */
   width: number
   height: number
+  padX: number
+  padY: number
   altText: TextBox | null
 }
 
@@ -58,6 +55,7 @@ export interface LayoutInput {
   imageScale?: number
   tokens?: AppleTokens
   fontFamily?: string
+  displayFontFamily?: string
   uppercaseLabels?: boolean
 }
 
@@ -65,14 +63,17 @@ export interface LayoutInput {
 export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
   const tk = input.tokens ?? appleTokens
   const { model, measurer } = input
-  const family = input.fontFamily ?? tk.fontFamily
+  const textFamily = input.fontFamily ?? tk.fontFamily
+  const displayFamily = input.displayFontFamily ?? input.fontFamily ?? tk.displayFontFamily
+  // Pick the cut from the style's nominal size and keep it when shrinking, so measurement stays consistent.
+  const family = (size: number) => (size >= tk.displayMinSize ? displayFamily : textFamily)
   const uppercase = input.uppercaseLabels ?? tk.label.uppercase
   const imgScale = input.imageScale ?? 2
 
   const W = tk.card.width
   const inner = W - tk.card.paddingX * 2
 
-  const labelFont: FontSpec = { family, size: tk.label.size, weight: tk.label.weight, letterSpacing: tk.label.letterSpacing }
+  const labelFont: FontSpec = { family: family(tk.label.size), size: tk.label.size, weight: tk.label.weight, letterSpacing: tk.label.letterSpacing }
   const labelBox = (text: string): TextBox | null =>
     text ? { text: uppercase ? text.toLocaleUpperCase() : text, font: labelFont, lineHeight: tk.label.lineHeight } : null
 
@@ -90,9 +91,10 @@ export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
     const labels = fields.map(f => labelBox(f.label))
     const labelWidths = labels.map(l => (l ? measurer.width(l.text, l.font) : 0))
     const available = width - gap * Math.max(0, n - 1)
+    const fam = family(style.size)
 
     const naturalAt = (size: number) =>
-      fields.map((f, i) => Math.max(labelWidths[i]!, measurer.width(f.value, { family, size, weight: style.weight })))
+      fields.map((f, i) => Math.max(labelWidths[i]!, measurer.width(f.value, { family: fam, size, weight: style.weight })))
 
     // Shrink the whole row uniformly until it fits, then fall back to splitting the width.
     let size: number = style.size
@@ -112,7 +114,7 @@ export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
         return {
           key: f.key,
           label: labels[i]!,
-          value: { text: f.value, font: { family, size, weight: style.weight }, lineHeight: scaleLineHeight(style, size) },
+          value: { text: f.value, font: { family: fam, size, weight: style.weight }, lineHeight: scaleLineHeight(style, size) },
           width: spans ? available : widths[i]!,
           align,
         }
@@ -123,17 +125,17 @@ export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
   // Header: logo on the left, header fields pinned right, logo text takes whatever is left.
   const logo = input.imageSizes.logo ? fitBox(input.imageSizes.logo, imgScale, tk.header.logoMaxWidth, tk.header.logoMaxHeight) : null
   const logoSpace = logo ? logo.width + tk.header.logoTextGap : 0
-  const headerFields = fitRow(model.header, inner - logoSpace, tk.headerValue, tk.header.fieldGap, () => 'right', false)
-  const headerFieldsWidth = sum(headerFields.fields.map(f => f.width)) + tk.header.fieldGap * Math.max(0, headerFields.fields.length - 1)
+  const headerFields = fitRow(model.header, inner - logoSpace, tk.headerValue, tk.header.gap, () => 'right', false)
+  const headerFieldsWidth = sum(headerFields.fields.map(f => f.width)) + tk.header.gap * Math.max(0, headerFields.fields.length - 1)
   let logoText: EventTicketLayout['header']['logoText'] = null
   if (model.logoText) {
-    const room = Math.max(0, inner - logoSpace - headerFieldsWidth - (headerFields.fields.length ? tk.header.fieldGap : 0))
-    const font = { family, size: tk.logoText.size, weight: tk.logoText.weight }
+    const room = Math.max(0, inner - logoSpace - headerFieldsWidth - (headerFields.fields.length ? tk.header.gap : 0))
+    const font = { family: family(tk.logoText.size), size: tk.logoText.size, weight: tk.logoText.weight }
     const fit = fitFontSize(measurer, model.logoText, font, room, tk.logoText.minSize)
-    logoText = { text: model.logoText, font: { ...font, size: fit.size }, lineHeight: Math.ceil(fit.size * 1.3), width: room }
+    logoText = { text: model.logoText, font: { ...font, size: fit.size }, lineHeight: scaleLineHeight(tk.logoText, fit.size), width: room }
   }
 
-  const strip = model.images.strip ? { width: W, height: Math.round(W / tk.strip.aspect) } : null
+  const strip = model.images.strip ? { width: W, height: tk.strip.height } : null
   const thumbnail = !strip && input.imageSizes.thumbnail
     ? fitBox(input.imageSizes.thumbnail, imgScale, tk.thumbnail.maxWidth, tk.thumbnail.maxHeight)
     : null
@@ -144,7 +146,7 @@ export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
   if (p) {
     const style = strip ? tk.primary.strip : tk.primary.plain
     const width = inner - thumbSpace
-    const font = { family, size: style.size, weight: style.weight }
+    const font = { family: family(style.size), size: style.size, weight: style.weight }
     const fit = fitFontSize(measurer, p.value, font, width, style.minSize)
     primary = {
       key: p.key,
@@ -158,8 +160,8 @@ export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
 
   // Wallet's natural alignment in a row: first field hugs the left edge, last hugs the right.
   const rowAlign = (i: number, n: number): TextAlign => (n > 1 && i === n - 1 ? 'right' : 'left')
-  const secondary = model.secondary.length ? fitRow(model.secondary, inner - thumbSpace, tk.field, tk.rows.gap, rowAlign) : null
-  const auxiliary = model.auxiliary.length ? fitRow(model.auxiliary, inner, tk.field, tk.rows.gap, rowAlign) : null
+  const secondary = model.secondary.length ? fitRow(model.secondary, inner - thumbSpace, tk.secondary, tk.rows.gap, rowAlign) : null
+  const auxiliary = model.auxiliary.length ? fitRow(model.auxiliary, inner, tk.auxiliary, tk.rows.gap, rowAlign) : null
 
   return {
     width: W,
@@ -171,37 +173,23 @@ export function layoutEventTicket(input: LayoutInput): EventTicketLayout {
     thumbnail,
     secondary,
     auxiliary,
-    barcode: model.barcode ? layoutBarcode(model.barcode, inner, measurer, family, tk) : null,
+    barcode: model.barcode ? layoutBarcode(model.barcode, inner, measurer, family(tk.barcode.altText.size), tk) : null,
   }
 }
 
 function layoutBarcode(barcode: BarcodeModel, inner: number, measurer: TextMeasurer, family: string, tk: AppleTokens): BarcodeLayout {
-  const pad = tk.barcode.boxPadding * 2
-  let kind: BarcodeLayout['kind']
-  let size: Size
-  switch (barcode.format) {
-    case 'PKBarcodeFormatPDF417':
-      kind = 'pdf417'
-      size = { ...tk.barcode.pdf417 }
-      break
-    case 'PKBarcodeFormatCode128':
-      kind = 'code128'
-      size = { ...tk.barcode.code128 }
-      break
-    default:
-      kind = 'square'
-      size = { width: tk.barcode.squareSize, height: tk.barcode.squareSize }
-  }
-  size.width = Math.min(size.width, inner - pad)
+  const kind: BarcodeLayout['kind'] = barcode.format === 'qr' || barcode.format === 'aztec' ? 'square' : barcode.format
+  const spec = tk.barcode[kind]
+  const width = Math.min(spec.width, inner - spec.padX * 2)
 
   let altText: TextBox | null = null
   if (barcode.altText) {
     const st = tk.barcode.altText
     const font = { family, size: st.size, weight: st.weight }
-    const fit = fitFontSize(measurer, barcode.altText, font, size.width, st.minSize)
+    const fit = fitFontSize(measurer, barcode.altText, font, width, st.minSize)
     altText = { text: barcode.altText, font: { ...font, size: fit.size }, lineHeight: st.lineHeight }
   }
-  return { kind, ...size, altText }
+  return { kind, width, height: spec.height, padX: spec.padX, padY: spec.padY, altText }
 }
 
 /** Scale an image (natural px at `scale`) into a max box in points, preserving aspect ratio. */

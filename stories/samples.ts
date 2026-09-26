@@ -1,4 +1,10 @@
 import type { ApplePassSource, PassJson } from '../src/index.js'
+import figmaIcon from './assets/figma/icon.png'
+import figmaLogo from './assets/figma/logo.png'
+import figmaStrip from './assets/figma/strip.jpg'
+import bowlingIcon from './assets/figma-bowling/icon.png'
+import bowlingLogo from './assets/figma-bowling/logo.png'
+import bowlingStrip from './assets/figma-bowling/strip.png'
 import * as img from './images.js'
 
 const base = {
@@ -15,6 +21,65 @@ const inDays = (days: number, hour = 20) => {
 }
 
 export const samples = {
+  /** Content of the "Apple Event Ticket" Figma mockup (node 1:64), for pixel comparison. */
+  mockup: (): ApplePassSource => ({
+    pass: {
+      ...base,
+      serialNumber: 'M-0001',
+      organizationName: 'Star',
+      description: 'Concert ticket',
+      foregroundColor: 'rgb(255, 255, 255)',
+      backgroundColor: 'rgb(242, 109, 95)',
+      labelColor: 'rgb(111, 53, 47)',
+      barcodes: [{ format: 'PKBarcodeFormatPDF417', message: 'JUSTROCKIT-MAYDAY-2024-S5-5J', messageEncoding: 'iso-8859-1' }],
+      eventTicket: {
+        headerFields: [
+          { key: 'date', label: 'Date', value: '5 May' },
+          { key: 'time', label: 'Time', value: '19:30' },
+        ],
+        secondaryFields: [{ key: 'event', label: 'Event', value: 'Just Rock It! Mayday 2024 Tour' }],
+        auxiliaryFields: [
+          { key: 'location', label: 'Location', value: 'Taipei Arena' },
+          { key: 'checkin', label: 'Check-in', value: '19:00' },
+          { key: 'section', label: 'Section', value: '5' },
+          { key: 'seat', label: 'Seat', value: '5J' },
+        ],
+        backFields: [{ key: 'venue', label: 'Venue', value: 'Taipei Arena, No. 2, Section 4, Nanjing East Road, Taipei' }],
+      },
+    },
+    files: {
+      'logo@3x.png': figmaLogo,
+      'strip@2x.png': figmaStrip,
+      'icon@3x.png': figmaIcon,
+    },
+  }),
+
+  /** Content of the iPhone example in the Figma file ("Examples/Ticket", node 1:475). */
+  mockupBowling: (): ApplePassSource => ({
+    pass: {
+      ...base,
+      serialNumber: 'B-0033',
+      organizationName: 'Bowled Over',
+      description: 'Bowling ticket',
+      logoText: 'Bowled Over',
+      foregroundColor: 'rgb(255, 255, 255)',
+      backgroundColor: 'rgb(224, 93, 45)',
+      labelColor: 'rgb(255, 177, 154)',
+      barcodes: [{ format: 'PKBarcodeFormatQR', message: 'BOWLED-OVER-BONANZA-LANE-33', messageEncoding: 'iso-8859-1' }],
+      eventTicket: {
+        headerFields: [{ key: 'date', label: '5:00 PM', value: 'August 22' }],
+        secondaryFields: [{ key: 'event', label: 'Bowl-a-Rama Alley', value: 'BOWLING BONANZA' }],
+        auxiliaryFields: [{ key: 'lane', label: 'Lane', value: '33' }],
+        backFields: [{ key: 'venue', label: 'Venue', value: 'Bowl-a-Rama Alley' }],
+      },
+    },
+    files: {
+      'logo@3x.png': bowlingLogo,
+      'strip@3x.png': bowlingStrip,
+      'icon@3x.png': bowlingIcon,
+    },
+  }),
+
   /** Strip layout: primary field over the strip image, QR code. */
   concert: (): ApplePassSource => ({
     pass: {

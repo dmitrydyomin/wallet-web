@@ -1,9 +1,24 @@
 # wallet-web
 
-Render Apple Wallet passes in the browser, as close as possible to the iOS Wallet app. Google Wallet support is planned.
+Render Apple Wallet and Google Wallet event tickets in the browser, matched to the iOS Wallet and Google Wallet apps (and to our Figma mockups).
 
-**Supported now:** Apple event tickets (`eventTicket`), in both the strip-image and background/thumbnail layouts; QR, PDF417, Aztec and Code 128 barcodes; `.lproj` localisation; date, number and currency formatting; the back fields; voided and expired states.
-**Not supported:** other pass styles, iOS 18 poster event tickets, NFC.
+**Apple:** event tickets (`eventTicket`), in both the strip-image and background/thumbnail layouts; `.lproj` localisation; date, number and currency formatting; back fields; voided and expired states.
+**Google:** event tickets (`EventTicketClass` + `EventTicketObject`, or a "Save to Google Wallet" JWT), as the classic card or the new full-screen view; Google's default template and `cardTemplateOverride` rows; localized strings.
+**Both:** QR, PDF417, Aztec and Code 128 barcodes; React components.
+**Not supported:** other pass types, iOS 18 poster event tickets, NFC.
+
+## React
+
+```tsx
+import { ApplePass, GooglePass } from 'wallet-web/react'
+
+<ApplePass pass="/tickets/concert.pkpass" side={side} fallback={<Spinner />} />
+<GooglePass pass={{ class: ticketClass, object: ticketObject }} variant="fullscreen" />
+```
+
+Objects passed as `pass` are compared by identity, so memoise them. Both components are client-only (the entry is marked `'use client'`) and accept every render option as a prop, plus `fallback`, `errorFallback`, `onRender` and `onError`. `<ApplePass>` exposes `flip()` through its ref.
+
+## Vanilla
 
 ```ts
 import { renderApplePass } from 'wallet-web'
@@ -13,7 +28,14 @@ document.body.append(pass.element)
 pass.flip('back')
 ```
 
-The input can be a `.pkpass` URL, a `Blob`/`File`, an `ArrayBuffer`, or `{ pass, files }`, where `files` maps file names such as `logo@2x.png` to Blobs, bytes or URLs.
+```ts
+import { renderGooglePass } from 'wallet-web'
+
+const google = await renderGooglePass(saveToWalletJwt, { variant: 'classic' })
+document.body.append(google.element)
+```
+
+Apple input can be a `.pkpass` URL, a `Blob`/`File`, an `ArrayBuffer`, or `{ pass, files }`, where `files` maps file names such as `logo@2x.png` to Blobs, bytes or URLs.
 
 Or use the custom element:
 
@@ -29,9 +51,9 @@ defineApplePassElement()
 2. `layoutEventTicket` uses [Pretext](https://github.com/chenglou/pretext) to measure text without reflow. It shrinks the primary field, the logo text and crowded rows the way Wallet does, and splits row widths between fields.
 3. The DOM renderer draws the card inside a Shadow DOM. Barcodes are rendered lazily with bwip-js, or with your own `barcodeRenderer`.
 
-Every visual constant lives in [`src/apple/tokens.ts`](src/apple/tokens.ts). Pass `tokens` to override them.
+Every visual constant lives in [`src/apple/tokens.ts`](src/apple/tokens.ts) and [`src/google/tokens.ts`](src/google/tokens.ts), with the Figma node each value comes from. Pass `tokens` to override them.
 
-Fonts: SF Pro can't be served on the web. The default stack uses SF Pro when it is installed locally, then Inter. Load your web font before rendering, or pass `fontFamily`. The renderer waits for `document.fonts` so that Pretext measures the right font.
+Fonts: Google passes use Google Sans Flex (on Google Fonts). SF Pro can't be served on the web. The default stack uses SF Pro when it is installed locally, then Inter. Load your web font before rendering, or pass `fontFamily`. The renderer waits for `document.fonts` so that Pretext measures the right font.
 
 ## Development
 

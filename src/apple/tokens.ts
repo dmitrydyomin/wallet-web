@@ -2,65 +2,95 @@
  * Visual constants for the iOS Wallet pass, in design pixels (1 = 1pt on iOS).
  * The card is laid out at `card.width` and scaled as a whole with CSS `zoom`.
  *
- * These are first-pass values; replace them with measurements from the Figma
- * mockups. Everything the renderer draws is driven from here.
+ * Values come from the "Apple Event Ticket" frame in the Figma mockup
+ * (Apple-Google-wallet-event-passes, node 1:64) unless marked "not in mockup".
  */
 export const appleTokens = {
-  /** SF Pro is not web-licensed, so it's only used when installed locally; Inter is the closest free substitute. */
+  /**
+   * SF Pro is not web-licensed, so it's only used when installed locally; Inter is the closest free substitute.
+   * Like iOS, text of `displayMinSize` pt and up uses the Display cut.
+   */
   fontFamily: '"SF Pro Text", "SF Pro", Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  displayFontFamily: '"SF Pro Display", "SF Pro", Inter, "Helvetica Neue", Helvetica, Arial, sans-serif',
+  displayMinSize: 20,
 
   card: {
-    width: 360,
-    height: 460,
-    radius: 12,
+    width: 358,
+    height: 502,
+    radius: 0,
     paddingX: 16,
-    shadow: '0 1px 2px rgba(0,0,0,0.12), 0 8px 24px rgba(0,0,0,0.18)',
+    /** 1px inside stroke that follows the card outline, notch included. */
+    border: 'rgba(0, 0, 0, 0.16)',
+    borderWidth: 1,
   },
 
-  /** Semicircular cutout at the top centre that marks a pass as an event ticket. */
-  notch: { radius: 16 },
+  /** Soft glow under the card in the pass's background color (from the iPhone example, node 1:481). */
+  glow: { insetX: 20, top: 30, bottom: -10, blur: 18, opacity: 0.35, radius: 12 },
+
+  /** Top-centre cutout marking an event ticket: a circle centred `offset` above the top edge (63×16 visible arc). */
+  notch: { radius: 39, offset: 23 },
 
   header: {
-    paddingTop: 6,
-    height: 50,
+    paddingY: 12,
+    /** Content height: label (10) + 21pt value (25). */
+    height: 35,
     logoMaxWidth: 160,
-    logoMaxHeight: 44,
-    logoTextGap: 8,
-    fieldGap: 14,
+    logoMaxHeight: 32,
+    /** Logo → logo text (from the iPhone example). */
+    logoTextGap: 6,
+    /** Logo/logo text → header fields, and between header fields. */
+    gap: 16,
   },
 
-  logoText: { size: 17, weight: 600, minSize: 13 },
+  /** From the iPhone example header ("Bowled Over"). */
+  logoText: { size: 19, weight: 500, lineHeight: 25, minSize: 13 },
 
-  label: { size: 11, weight: 600, lineHeight: 14, letterSpacing: 0.3, uppercase: true },
+  label: { size: 11, weight: 600, lineHeight: 10, letterSpacing: 0, uppercase: true },
 
-  headerValue: { size: 17, weight: 400, lineHeight: 22, minSize: 12 },
+  headerValue: { size: 21, weight: 400, lineHeight: 25, minSize: 13 },
 
   primary: {
-    /** Primary field drawn over the strip image. */
+    /** Primary field drawn over the strip image (not in mockup). */
     strip: { size: 30, weight: 400, lineHeight: 36, minSize: 16, paddingTop: 10 },
-    /** Primary field on a plain/background-image pass, beside the thumbnail. */
-    plain: { size: 26, weight: 400, lineHeight: 32, minSize: 16, marginTop: 6 },
+    /** Primary field on a plain/background-image pass, beside the thumbnail (not in mockup). */
+    plain: { size: 26, weight: 400, lineHeight: 32, minSize: 16, marginTop: 4 },
   },
 
-  field: { size: 17, weight: 400, lineHeight: 22, minSize: 11 },
+  secondary: { size: 21, weight: 400, lineHeight: 25, minSize: 13 },
+  auxiliary: { size: 17, weight: 400, lineHeight: 20, minSize: 11 },
 
-  rows: { gap: 12, spacing: 10, firstMarginTop: 10 },
+  rows: {
+    /** Fields area padding above the first row. */
+    paddingTop: 12,
+    /** Vertical gap between the secondary and auxiliary rows. */
+    spacing: 24,
+    /** Minimum horizontal gap between fields in a row. */
+    gap: 12,
+  },
 
-  /** Apple's event-ticket strip is 375×98pt, stretched to the card width. */
-  strip: { aspect: 375 / 98 },
+  strip: { height: 92 },
 
+  /** Not in mockup. */
   thumbnail: { maxWidth: 90, maxHeight: 90, gap: 12 },
 
   barcode: {
-    marginBottom: 18,
-    boxRadius: 8,
-    boxPadding: 10,
-    squareSize: 140,
-    pdf417: { width: 260, height: 84 },
-    code128: { width: 260, height: 72 },
-    altText: { size: 11, weight: 500, lineHeight: 14, marginTop: 6, minSize: 8 },
+    /** White box sits 16pt above the card's bottom edge. */
+    marginBottom: 16,
+    boxRadius: 5,
+    /** Code size and box padding per barcode kind. */
+    pdf417: { width: 205, height: 54, padX: 13.5, padY: 26 },
+    /** Not in mockup; matches the PDF417 box. */
+    code128: { width: 205, height: 54, padX: 13.5, padY: 26 },
+    /** From the iPhone example's QR code. */
+    square: { width: 115, height: 115, padX: 8, padY: 8 },
+    /** Not in mockup. */
+    altText: { size: 11, weight: 500, lineHeight: 14, marginTop: 4, minSize: 8 },
   },
 
+  /** App icon (icon.png) in the bottom-left corner. */
+  icon: { size: 20, inset: 7, radius: 4, border: 'rgba(0, 0, 0, 0.16)' },
+
+  /** Not in mockup. */
   back: {
     background: '#f2f2f7',
     rowPaddingY: 12,

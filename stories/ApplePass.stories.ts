@@ -32,7 +32,7 @@ let current: RenderedPass | undefined
 const meta: Meta<Args> = {
   title: 'Apple Wallet/Event Ticket',
   args: {
-    sample: 'concert',
+    sample: 'mockup',
     zoom: 1,
     side: 'front',
     uppercaseLabels: true,
@@ -70,6 +70,28 @@ const meta: Meta<Args> = {
 export default meta
 type Story = StoryObj<Args>
 
+export const Mockup: Story = { name: 'Figma mockup', args: { sample: 'mockup' } }
+export const MockupBowling: Story = { name: 'Figma mockup 2 (iPhone example)', args: { sample: 'mockupBowling' } }
+
+/** Both Figma mockups side by side, to compare against the file's Apple page. */
+export const Mockups: Story = {
+  name: 'Figma mockups',
+  loaders: [
+    async ({ args }) => ({
+      passes: await Promise.all(
+        (['mockup', 'mockupBowling'] as const).map(name => renderApplePass(samples[name](), { zoom: args.zoom, locale: args.locale })),
+      ),
+    }),
+  ],
+  render: (_args, { loaded }) => {
+    const row = document.createElement('div')
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:40px;justify-content:center;padding:24px'
+    row.append(...(loaded.passes as RenderedPass[]).map(p => p.element))
+    return row
+  },
+  parameters: { controls: { include: ['zoom'] } },
+  globals: { backgrounds: { value: 'light' } },
+}
 export const Concert: Story = { args: { sample: 'concert' } }
 export const Theatre: Story = { args: { sample: 'theatre' } }
 export const Festival: Story = { args: { sample: 'festival' } }

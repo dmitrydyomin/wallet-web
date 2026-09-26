@@ -18,7 +18,7 @@ describe('renderApplePass', () => {
   })
 
   it('flips to the back and back again', async () => {
-    const rendered = await renderApplePass({ pass: eventPass() }, { measurer: fakeMeasurer, barcodeRenderer: async () => '' })
+    const rendered = await renderApplePass({ pass: eventPass() }, { measurer: fakeMeasurer, barcodeRenderer: async () => '', infoButton: true })
     const root = rendered.element.shadowRoot!
     ;(root.querySelector('.info-button') as HTMLButtonElement).click()
     expect(root.querySelector('.flipper')!.classList.contains('is-flipped')).toBe(true)

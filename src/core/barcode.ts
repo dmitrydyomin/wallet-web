@@ -1,4 +1,13 @@
-import type { BarcodeModel } from './model.js'
+export type BarcodeFormat = 'qr' | 'pdf417' | 'aztec' | 'code128'
+
+/** A barcode to draw, independent of wallet platform. */
+export interface BarcodeModel {
+  format: BarcodeFormat
+  message: string
+  /** Character encoding of `message`, e.g. `iso-8859-1` or `utf-8`. */
+  messageEncoding: string
+  altText?: string
+}
 
 /** Render a barcode to an SVG string. Pluggable so apps can swap in their own encoder. */
 export type BarcodeRenderer = (barcode: BarcodeModel) => Promise<string>
@@ -12,20 +21,20 @@ export const renderBarcodeSvg: BarcodeRenderer = async barcode => {
 
   let svg: string
   switch (barcode.format) {
-    case 'PKBarcodeFormatQR':
+    case 'qr':
       svg = bwip.qrcode({ ...base, bcid: 'qrcode', eclevel: 'M' } as never, dwg)
       break
-    case 'PKBarcodeFormatAztec':
+    case 'aztec':
       svg = bwip.azteccode({ ...base, bcid: 'azteccode' }, dwg)
       break
-    case 'PKBarcodeFormatPDF417':
+    case 'pdf417':
       svg = bwip.pdf417({ ...base, bcid: 'pdf417', columns: 4 } as never, dwg)
       break
-    case 'PKBarcodeFormatCode128':
+    case 'code128':
       svg = bwip.code128({ ...base, bcid: 'code128', height: 10 }, dwg)
       break
   }
-  const square = barcode.format === 'PKBarcodeFormatQR' || barcode.format === 'PKBarcodeFormatAztec'
+  const square = barcode.format === 'qr' || barcode.format === 'aztec'
   // Make the SVG fill its box; square codes keep their aspect, linear/stacked codes stretch.
   return svg.replace(
     /<svg\b([^>]*)>/,

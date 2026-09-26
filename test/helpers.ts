@@ -1,5 +1,6 @@
 import type { TextMeasurer } from '../src/core/text.js'
 import type { PassJson } from '../src/apple/types.js'
+import type { GooglePassSource } from '../src/google/types.js'
 
 /** Every character is 0.6em wide: deterministic stand-in for Pretext in jsdom. */
 export const fakeMeasurer: TextMeasurer = {
@@ -34,5 +35,29 @@ export function eventPass(overrides: Partial<PassJson> = {}): PassJson {
       backFields: [{ key: 'terms', label: 'Terms', value: 'See https://example.com/terms or call +1 555 123 4567' }],
     },
     ...overrides,
+  }
+}
+
+const ls = (value: string) => ({ defaultValue: { language: 'en-US', value } })
+
+export function googleTicket(overrides: { class?: object; object?: object } = {}): GooglePassSource {
+  return {
+    class: {
+      id: 'issuer.concert',
+      issuerName: 'Northside Arena',
+      eventName: ls('The Midnight Echoes'),
+      venue: { name: ls('Main Hall') },
+      dateTime: { start: '2026-10-12T20:00:00-07:00' },
+      hexBackgroundColor: '#1c1640',
+      ...overrides.class,
+    },
+    object: {
+      id: 'issuer.ticket-1',
+      classId: 'issuer.concert',
+      state: 'ACTIVE',
+      barcode: { type: 'QR_CODE', value: 'TICKET-1', alternateText: 'T-1' },
+      seatInfo: { section: ls('112'), row: ls('F'), seat: ls('7') },
+      ...overrides.object,
+    },
   }
 }

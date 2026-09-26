@@ -1,5 +1,6 @@
-import { createPretextMeasurer, fontShorthand, type TextMeasurer } from '../core/text.js'
-import { renderBarcodeSvg, type BarcodeRenderer } from './barcode.js'
+import { h, img, loadFonts, px, text } from '../core/dom.js'
+import { createPretextMeasurer, type TextMeasurer } from '../core/text.js'
+import { renderBarcodeSvg, type BarcodeRenderer } from '../core/barcode.js'
 import {
   layoutEventTicket,
   type EventTicketLayout,
@@ -10,6 +11,7 @@ import {
 } from './layout.js'
 import { buildEventTicketModel, type EventTicketModel, type ModelOptions } from './model.js'
 import { fetchPkpass, readPkpass } from './pkpass.js'
+import { eventTicketBorderSvg } from './shape.js'
 import { eventTicketCss } from './styles.js'
 import { appleTokens, type AppleTokens } from './tokens.js'
 import type { ApplePassSource } from './types.js'
@@ -19,13 +21,18 @@ export type ApplePassInput = ApplePassSource | Blob | ArrayBuffer | Uint8Array |
 export interface RenderOptions extends ModelOptions {
   /** Uniform scale of the card; 1 renders at design size (tokens.card.width px wide). */
   zoom?: number
+  /** Font for text below `tokens.displayMinSize`; also used for larger text unless `displayFontFamily` is set. */
   fontFamily?: string
+  displayFontFamily?: string
   /** Wallet shows field labels in uppercase. */
   uppercaseLabels?: boolean
   /** Start on the back of the pass. */
   side?: 'front' | 'back'
-  /** Show the info button that flips to the back fields. Default true. */
-  flippable?: boolean
+  /**
+   * Show an ⓘ button that flips to the back fields. Off by default: iOS puts pass
+   * details in a menu outside the card, so apps usually wire `flip()` to their own UI.
+   */
+  infoButton?: boolean
   tokens?: AppleTokens
   measurer?: TextMeasurer
   barcodeRenderer?: BarcodeRenderer
@@ -54,13 +61,15 @@ export async function loadApplePass(input: ApplePassInput): Promise<ApplePassSou
 export async function renderApplePass(input: ApplePassInput, options: RenderOptions = {}): Promise<RenderedPass> {
   const tk = options.tokens ?? appleTokens
   const family = options.fontFamily ?? tk.fontFamily
+  const displayFamily = options.displayFontFamily ?? options.fontFamily ?? tk.displayFontFamily
   const source = await loadApplePass(input)
   const imageScale = options.scale ?? (typeof devicePixelRatio === 'number' ? Math.min(3, Math.max(1, Math.round(devicePixelRatio))) : 2)
   const model = buildEventTicketModel(source, { ...options, scale: imageScale })
 
   const [imageSizes] = await Promise.all([
     loadImageSizes(model),
-    loadFonts(family, [tk.label.weight, tk.field.weight, tk.logoText.weight, tk.barcode.altText.weight]),
+    loadFonts(family, [tk.label.weight, tk.auxiliary.weight, tk.barcode.altText.weight]),
+    loadFonts(displayFamily, [tk.headerValue.weight, tk.secondary.weight, tk.logoText.weight]),
   ])
 
   const layout = layoutEventTicket({
@@ -70,6 +79,7 @@ export async function renderApplePass(input: ApplePassInput, options: RenderOpti
     imageScale,
     tokens: tk,
     fontFamily: family,
+    displayFontFamily: displayFamily,
     uppercaseLabels: options.uppercaseLabels,
   })
 
@@ -88,7 +98,7 @@ export async function renderApplePass(input: ApplePassInput, options: RenderOpti
   if (options.zoom && options.zoom !== 1) pass.style.zoom = String(options.zoom)
 
   const flipper = h('div', { class: 'flipper' })
-  const flippable = (options.flippable ?? true) && model.back.length > 0
+  const infoButton = options.infoButton === true && model.back.length > 0
   const flip = (side?: 'front' | 'back') => {
     const toBack = side ? side === 'back' : !flipper.classList.contains('is-flipped')
     flipper.classList.toggle('is-flipped', toBack)
@@ -96,10 +106,10 @@ export async function renderApplePass(input: ApplePassInput, options: RenderOpti
     back.inert = !toBack
   }
 
-  const front = renderFront(model, layout, flippable ? () => flip('back') : null)
+  const front = renderFront(model, layout, tk, infoButton ? () => flip('back') : null)
   const back = renderBack(model, () => flip('front'))
-  flipper.append(h('div', { class: 'shadow' }), front, back)
-  pass.append(flipper)
+  flipper.append(front, back)
+  pass.append(h('div', { class: 'glow' }), flipper)
   root.append(pass)
   flip(options.side === 'back' && model.back.length ? 'back' : 'front')
 
@@ -126,7 +136,7 @@ export async function renderApplePass(input: ApplePassInput, options: RenderOpti
   }
 }
 
-function renderFront(model: EventTicketModel, layout: EventTicketLayout, onInfo: (() => void) | null): HTMLElement {
+function renderFront(model: EventTicketModel, layout: EventTicketLayout, tk: AppleTokens, onInfo: (() => void) | null): HTMLElement {
   const front = h('section', { class: 'face front', part: 'front', 'aria-label': model.description || model.organizationName })
   if (model.voided || model.expired) front.classList.add('is-invalid')
 
@@ -151,8 +161,8 @@ function renderFront(model: EventTicketModel, layout: EventTicketLayout, onInfo:
   }
   content.append(header)
 
-  // Strip with primary field overlaid, or primary beside the thumbnail.
-  let firstRowInTop = false
+  // Strip with primary field overlaid, or primary (and secondary row) beside the thumbnail.
+  let secondaryInTop = false
   if (layout.strip && model.images.strip) {
     const strip = h('div', { class: 'strip' })
     strip.style.height = px(layout.strip.height)
@@ -164,26 +174,25 @@ function renderFront(model: EventTicketModel, layout: EventTicketLayout, onInfo:
     const main = h('div', { class: 'top-main' })
     if (layout.primary) main.append(renderPrimary(layout.primary, false))
     if (layout.secondary && layout.thumbnail) {
-      main.append(renderRow(layout.secondary, true))
-      firstRowInTop = true
+      main.append(renderRows([layout.secondary]))
+      secondaryInTop = true
     }
     top.append(main)
     if (layout.thumbnail && model.images.thumbnail) top.append(img(model.images.thumbnail, 'thumbnail', layout.thumbnail))
     content.append(top)
   }
 
-  const rows = h('div', { class: 'rows' })
-  let first = true
-  if (layout.secondary && !firstRowInTop) {
-    rows.append(renderRow(layout.secondary, first))
-    first = false
+  const rows = [secondaryInTop ? null : layout.secondary, layout.auxiliary].filter(r => r !== null)
+  if (rows.length) {
+    const el = renderRows(rows)
+    if (secondaryInTop) el.classList.add('continued')
+    content.append(el)
   }
-  if (layout.auxiliary) rows.append(renderRow(layout.auxiliary, first && !firstRowInTop))
-  if (rows.childElementCount) content.append(rows)
 
   if (layout.barcode) {
     const area = h('div', { class: 'barcode-area' })
     const box = h('div', { class: 'barcode-box' })
+    box.style.padding = `${px(layout.barcode.padY)} ${px(layout.barcode.padX)}`
     const svg = h('div', { class: 'barcode-svg', role: 'img', 'aria-label': model.barcode?.altText ?? 'Barcode' })
     svg.style.width = px(layout.barcode.width)
     svg.style.height = px(layout.barcode.height)
@@ -197,6 +206,8 @@ function renderFront(model: EventTicketModel, layout: EventTicketLayout, onInfo:
     content.append(area)
   }
 
+  if (model.images.icon) content.append(h('img', { class: 'icon', src: model.images.icon, alt: '', draggable: 'false' }))
+
   if (onInfo) {
     const btn = h('button', { class: 'info-button', type: 'button', 'aria-label': 'Pass details' })
     btn.innerHTML =
@@ -204,6 +215,7 @@ function renderFront(model: EventTicketModel, layout: EventTicketLayout, onInfo:
     btn.addEventListener('click', onInfo)
     content.append(btn)
   }
+  front.insertAdjacentHTML('beforeend', eventTicketBorderSvg(tk))
   return front
 }
 
@@ -245,10 +257,14 @@ function renderPrimary(p: FieldLayout, overStrip: boolean): HTMLElement {
   return el
 }
 
-function renderRow(row: RowLayout, first: boolean): HTMLElement {
-  const el = h('div', { class: first ? 'row first' : 'row' })
-  el.append(...row.fields.map(renderField))
-  return el
+function renderRows(rows: RowLayout[]): HTMLElement {
+  const wrap = h('div', { class: 'rows' })
+  for (const row of rows) {
+    const el = h('div', { class: 'row' })
+    el.append(...row.fields.map(renderField))
+    wrap.append(el)
+  }
+  return wrap
 }
 
 function renderField(f: FieldLayout): HTMLElement {
@@ -259,32 +275,6 @@ function renderField(f: FieldLayout): HTMLElement {
   el.append(text('value', f.value))
   return el
 }
-
-function text(cls: string, box: TextBox, color?: string): HTMLElement {
-  const el = h('span', { class: cls })
-  el.textContent = box.text
-  el.style.font = `${fontShorthand(box.font)}`
-  el.style.lineHeight = px(box.lineHeight)
-  if (box.font.letterSpacing) el.style.letterSpacing = px(box.font.letterSpacing)
-  if (color) el.style.color = color
-  if ('width' in box && typeof box.width === 'number') el.style.maxWidth = px(box.width)
-  return el
-}
-
-function img(src: string, cls: string, size: Size, alt = ''): HTMLImageElement {
-  const el = h('img', { class: cls, src, alt, draggable: 'false' })
-  el.style.width = px(size.width)
-  el.style.height = px(size.height)
-  return el
-}
-
-function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}): HTMLElementTagNameMap[K] {
-  const el = document.createElement(tag)
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v)
-  return el
-}
-
-const px = (n: number) => `${n}px`
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -324,10 +314,3 @@ async function loadImageSizes(model: EventTicketModel): Promise<Partial<Record<'
   return out
 }
 
-/** Make sure web fonts are loaded before measuring, or Pretext would measure a fallback font. */
-async function loadFonts(family: string, weights: number[]): Promise<void> {
-  if (typeof document === 'undefined' || !document.fonts) return
-  await Promise.all(
-    [...new Set(weights)].map(w => document.fonts.load(`${w} 16px ${family}`).catch(() => undefined)),
-  )
-}

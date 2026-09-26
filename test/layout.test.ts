@@ -60,8 +60,8 @@ describe('layoutEventTicket', () => {
     const row = layout(pass).secondary!
     const inner = appleTokens.card.width - appleTokens.card.paddingX * 2
     const size = row.fields[0]!.value.font.size
-    expect(size).toBeLessThan(appleTokens.field.size)
-    expect(size).toBeGreaterThanOrEqual(appleTokens.field.minSize)
+    expect(size).toBeLessThan(appleTokens.secondary.size)
+    expect(size).toBeGreaterThanOrEqual(appleTokens.secondary.minSize)
     const total = row.fields.reduce((s, f) => s + f.width, 0) + appleTokens.rows.gap
     expect(total).toBeLessThanOrEqual(inner + 1)
   })
@@ -85,7 +85,7 @@ describe('buildEventTicketModel', () => {
 
   it('falls back through barcodes to a supported format', () => {
     const pass = eventPass({ barcodes: [{ format: 'PKBarcodeFormatNFC' as never, message: 'x' }, { format: 'PKBarcodeFormatPDF417', message: 'y' }] })
-    expect(buildEventTicketModel({ pass }).barcode?.format).toBe('PKBarcodeFormatPDF417')
+    expect(buildEventTicketModel({ pass }).barcode?.format).toBe('pdf417')
   })
 
   it('rejects non-event passes', () => {

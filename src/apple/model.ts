@@ -1,3 +1,4 @@
+import type { BarcodeFormat, BarcodeModel } from '../core/barcode.js'
 import { parseColor, toCss } from '../core/color.js'
 import { formatFieldValue, type FormatOptions } from './format.js'
 import { decodeStrings, parseStrings } from './strings.js'
@@ -11,6 +12,8 @@ import type {
   PassFiles,
   PassImageName,
 } from './types.js'
+
+export type { BarcodeModel }
 
 export type Align = 'left' | 'center' | 'right' | 'natural'
 
@@ -27,13 +30,6 @@ export interface BackFieldModel {
   value: string
   /** Sanitised HTML from `attributedValue` (only `<a href>` survives), if present. */
   html?: string
-}
-
-export interface BarcodeModel {
-  format: PKBarcodeFormat
-  message: string
-  messageEncoding: string
-  altText?: string
 }
 
 export interface EventTicketModel {
@@ -59,12 +55,12 @@ export interface ModelOptions extends FormatOptions {
   scale?: number
 }
 
-const supportedBarcodes: PKBarcodeFormat[] = [
-  'PKBarcodeFormatQR',
-  'PKBarcodeFormatPDF417',
-  'PKBarcodeFormatAztec',
-  'PKBarcodeFormatCode128',
-]
+const barcodeFormats: Partial<Record<PKBarcodeFormat, BarcodeFormat>> = {
+  PKBarcodeFormatQR: 'qr',
+  PKBarcodeFormatPDF417: 'pdf417',
+  PKBarcodeFormatAztec: 'aztec',
+  PKBarcodeFormatCode128: 'code128',
+}
 
 /** Resolve a pass source into everything the renderer needs: localised, formatted, with image URLs. */
 export function buildEventTicketModel(source: ApplePassSource, opts: ModelOptions = {}): EventTicketModel {
@@ -152,10 +148,10 @@ function pickBarcode(
   t: (s: string | undefined) => string | undefined,
 ): BarcodeModel | undefined {
   // Wallet uses the first entry of `barcodes` it supports, falling back to the legacy `barcode` key.
-  const b = [...(barcodes ?? []), ...(legacy ? [legacy] : [])].find(b => supportedBarcodes.includes(b.format))
+  const b = [...(barcodes ?? []), ...(legacy ? [legacy] : [])].find(b => barcodeFormats[b.format])
   if (!b) return undefined
   return {
-    format: b.format,
+    format: barcodeFormats[b.format]!,
     message: b.message,
     messageEncoding: b.messageEncoding ?? 'iso-8859-1',
     altText: t(b.altText),
